@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Math Quiz • Black & Gold</title>
+
     <style>
       :root{
         --bg:#0b0b0f;
@@ -399,6 +400,7 @@
     /* ====== Live monitoring logic ====== */
     const ADMIN_SECRET = "Anis120467//";
     const LIVE_KEY = 'quizLiveResults';
+    const QUIZ_FINISHED_FLAG = 'quizFinished';
 
     function publishUpdate() {
         if (!quiz.student) return;
@@ -453,9 +455,11 @@
             if (scoreB !== scoreA) return scoreB - scoreA;
             return a.time - b.time;
         });
+
         const tb = document.querySelector('#tblAdmin tbody');
         if (!tb) return;
         tb.innerHTML = '';
+
         sorted.forEach((r, i) => {
             const score = scoreLiveAnswers(r.answers, QUESTION_BANK);
             const tr = document.createElement('tr');
@@ -641,6 +645,7 @@
                 return { id: q.id, type: q.type, correct: ok, chosen, chosenText, correctKey: q.correct, correctText, solution: q.solutionSteps };
             }
         });
+
         const finishedAt = quiz.finishedAt || Date.now();
         const timeSec = Math.max(1, Math.round((finishedAt - quiz.startedAt) / 1000));
         const pct = Math.round((score / total) * 100);
