@@ -90,7 +90,6 @@ function publishUpdate() {
         }
         return data;
     });
-    // This is a simple signal for the teacher dashboard to update
     localStorage.setItem('quizUpdateSignal', Date.now());
 }
 
@@ -417,11 +416,13 @@ function buildStudentDashboard(my) {
                 <div class="muted" style="margin-top:8px;white-space:pre-line">${d.solution.replace(/\n/g, '\n')}</div>
             `;
         } else {
+            const correctText = d.correctText || '';
+            const chosenText = d.chosenText || '';
             box.innerHTML = `
                 <div><b>Q${i + 1}</b> ${d.correct ? '✅' : '❌'}</div>
                 <div class="grid two">
-                    <div>Your Answer: <span class="${d.correct ? '' : 'muted'}">(${d.chosen || '—'}) ${d.chosenText || ''}</span></div>
-                    <div>Correct: <span class="gold">(${d.correctKey}) ${d.correctText}</span></div>
+                    <div>Your Answer: <span class="${d.correct ? '' : 'muted'}">(${d.chosen || '—'}) ${chosenText}</span></div>
+                    <div>Correct: <span class="gold">(${d.correctKey}) ${correctText}</span></div>
                 </div>
                 <div class="muted" style="margin-top:8px">${d.solution}</div>
             `;
@@ -583,4 +584,9 @@ document.getElementById('btnSaveCert').addEventListener('click', () => {
         a.href = canvas.toDataURL('image/png');
         a.click();
     });
+});
+
+/* ====== Auto-load leader on first open (optional) ====== */
+document.addEventListener('DOMContentLoaded', () => {
+    buildLeaderboard();
 });
