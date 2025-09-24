@@ -1,338 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Math Quiz • Black & Gold</title>
-
-    <style>
-      :root{
-        --bg:#0b0b0f;
-        --panel:#12121a;
-        --gold:#d4af37;
-        --muted:#a6a6b3;
-        --ok:#38c172;
-        --bad:#e3342f;
-        --accent:#8a6b1f;
-      }
-      *{box-sizing:border-box}
-      html,body{height:100%}
-      body{
-        margin:0;
-        font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
-        color:#eee;
-        background:
-          radial-gradient(1200px 600px at 80% -10%, #201a10 0%, transparent 60%),
-          radial-gradient(900px 500px at -10% 10%, #15121a 0%, transparent 60%),
-          var(--bg);
-      }
-      h1,h2,h3{margin:0 0 8px}
-      a,button,input,select,textarea{font:inherit}
-      .wrap{max-width:1000px;margin:0 auto;padding:24px}
-      .brand{
-        display:flex;align-items:center;gap:12px;margin-bottom:20px
-      }
-      .logo{
-        width:40px;height:40px;border-radius:10px;
-        background:linear-gradient(135deg,var(--gold),#ffefb0);
-        box-shadow:0 0 0 2px #0004, 0 6px 20px #0007;
-      }
-      .title{font-weight:700;letter-spacing:.5px}
-      .gold{color:var(--gold)}
-      .muted{color:var(--muted)}
-      .panel{
-        background:linear-gradient(180deg,#12121a, #0f0f14);
-        border:1px solid #22222e;
-        border-radius:16px;
-        padding:20px;
-        box-shadow:0 12px 40px #0008 inset, 0 2px 0 #ffffff08;
-      }
-      .grid{display:grid;gap:16px}
-      .two{grid-template-columns:repeat(2,minmax(0,1fr))}
-      @media (max-width:800px){.two{grid-template-columns:1fr}}
-      .btn{
-        background:linear-gradient(180deg,#1b1b25,#14141c);
-        border:1px solid #2a2a35;
-        color:#eee;padding:12px 16px;border-radius:12px;
-        cursor:pointer;transition:.2s;display:inline-flex;align-items:center;gap:8px
-      }
-      .btn:hover{transform:translateY(-1px);border-color:#3a3a48}
-      .btn.gold{background:linear-gradient(180deg,#2b230f,#1b160a);border-color:#4a3b14;color:#fff}
-      .btn.ghost{background:transparent;border:1px dashed #2a2a35;color:#bbb}
-      .btn.block{width:100%;justify-content:center}
-      .input,select,textarea{
-        width:100%;padding:12px 14px;border-radius:10px;background:#0e0e15;
-        border:1px solid #2a2a35;color:#eee;outline:none
-      }
-      .input:focus,select:focus,textarea:focus{border-color:#3a3a48;box-shadow:0 0 0 4px #ffffff06}
-      .bar{height:10px;border-radius:999px;background:#1a1a22;border:1px solid #292936}
-      .bar>span{display:block;height:8px;margin:0 1px;border-radius:999px;background:linear-gradient(90deg,#3f3210,var(--gold))}
-      .tags{display:flex;gap:8px;flex-wrap:wrap}
-      .tag{padding:6px 10px;border-radius:999px;background:#0e0e15;border:1px solid #2a2a35;color:#bbb}
-      .page{display:none}
-      .page.active{display:block}
-      .qcard{
-        padding:16px;border-radius:14px;background:#0e0e15;border:1px solid #242434
-      }
-      .opt{
-        display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:10px;
-        background:#0b0b12;border:1px solid #222236;cursor:pointer
-      }
-      .opt:hover{border-color:#32324a}
-      .opt.correct{border-color:#2b6b3b;background:#0e1411}
-      .opt.wrong{border-color:#7a2b2b;background:#141010}
-      .kpi{display:flex;gap:16px;flex-wrap:wrap}
-      .kpi .box{flex:1 min(180px);padding:14px;border-radius:12px;background:#0e0e15;border:1px solid #242434}
-      .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,monospace}
-      .table{width:100%;border-collapse:collapse}
-      .table th,.table td{padding:10px;border-bottom:1px solid #242434;text-align:left}
-      .table th{color:#bbb;font-weight:600}
-      .pill{padding:4px 10px;border-radius:999px;background:#0e0e15;border:1px solid #2a2a35}
-      .float-math{
-        position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25
-      }
-      .bit{
-        position:absolute;color:var(--gold);font-weight:700;filter:drop-shadow(0 0 6px #000);
-        animation:float 14s linear infinite;
-      }
-      @keyframes float{
-        from{transform:translateY(110vh) rotate(0deg);opacity:.0}
-        10%{opacity:.9}
-        90%{opacity:.9}
-        to{transform:translateY(-20vh) rotate(360deg);opacity:0}
-      }
-      .podium{display:flex;gap:12px;align-items:flex-end}
-      .pod{flex:1;background:#0e0e15;border:1px solid #242434;border-radius:12px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:140px;padding:8px}
-      .pod:nth-child(1){height:180px;border-color:#5a4818}
-      .pod h4{margin:6px 0 0}
-      .cert{
-        width:min(900px,100%);margin:0 auto;background:white;color:#111;padding:36px;border:10px solid #d4af37;border-radius:14px;
-        box-shadow:0 20px 60px #0009
-      }
-      .cert h1{color:#8a6b1f}
-      .cert .sig{display:flex;justify-content:space-between;margin-top:32px;color:#333}
-      .live-status {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-      }
-      .dot-red {
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          background-color: var(--bad);
-          border-radius: 50%;
-          animation: pulse-red 1.5s infinite;
-      }
-      .dot-green {
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          background-color: var(--ok);
-          border-radius: 50%;
-      }
-      @keyframes pulse-red {
-          0% {
-              box-shadow: 0 0 0 0 rgba(227, 52, 47, 0.7);
-          }
-          70% {
-              box-shadow: 0 0 0 10px rgba(227, 52, 47, 0);
-          }
-          100% {
-              box-shadow: 0 0 0 0 rgba(227, 52, 47, 0);
-          }
-      }
-    </style>
-</head>
-<body>
-
-<div class="wrap">
-  <div class="brand">
-    <div class="logo"></div>
-    <div>
-      <div class="title">Mathematics Quiz <span class="gold">• Black & Gold</span></div>
-      <div class="muted">Teacher Dashboard & Student Quiz</div>
-    </div>
-  </div>
-
-  <section id="page-start" class="page active">
-    <div class="panel grid">
-      <h2 class="gold">Start Quiz</h2>
-      <div class="grid two">
-        <div class="grid">
-          <label>Full Name</label>
-          <input id="stuName" class="input" placeholder="Your full name" />
-        </div>
-        <div class="grid">
-          <label>Matric Number</label>
-          <input id="stuMatric" class="input" placeholder="e.g. MKT12345" />
-        </div>
-        <div class="grid">
-          <label>Class</label>
-          <select id="stuClass" class="input">
-            <option value="">Choose class</option>
-            <option>H3D</option>
-            <option>F1D</option>
-            <option>H2D</option>
-          </select>
-        </div>
-        <div class="grid" style="align-self: end;">
-          <button id="btnStart" class="btn gold block">Start Quiz</button>
-        </div>
-      </div>
-    </div>
-    <div class="panel grid" style="margin-top: 16px;">
-        <h2 class="gold">Teacher Access</h2>
-        <div class="grid two">
-            <input id="adminPass" class="input" type="password" placeholder="Enter password" />
-            <button id="btnAdminLogin" class="btn block">Login</button>
-        </div>
-    </div>
-  </section>
-
-  <section id="page-quiz" class="page">
-    <div class="panel grid">
-      <div class="grid two">
-        <div>
-          <h2>Question <span id="qNum">1</span>/<span id="qTotal">10</span></h2>
-          <div class="muted">Class: <span id="hdrClass"></span> • Name: <span id="hdrName"></span> • Matric: <span id="hdrMatric"></span></div>
-        </div>
-        <div>
-          <div class="muted" style="text-align:right">Time <span id="timeLive" class="pill mono">00:00</span></div>
-          <div class="bar"><span id="progress" style="width:0%"></span></div>
-        </div>
-      </div>
-
-      <div id="qContainer" class="qcard"></div>
-
-      <div class="grid two">
-        <button id="btnPrev" class="btn ghost">Back</button>
-        <button id="btnNext" class="btn gold">Next</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="page-student" class="page">
-    <div class="panel grid">
-      <h2 class="gold">Student Dashboard</h2>
-      <div class="kpi">
-        <div class="box"><div class="muted">Score</div><div id="kpiScore" class="mono" style="font-size:22px">–</div></div>
-        <div class="box"><div class="muted">Percentage</div><div id="kpiPct" class="mono" style="font-size:22px">–</div></div>
-        <div class="box"><div class="muted">Time</div><div id="kpiTime" class="mono" style="font-size:22px">–</div></div>
-        <div class="box"><div class="muted">Rank</div><div id="kpiRank" class="mono" style="font-size:22px">–</div></div>
-      </div>
-
-      <div id="tips" class="qcard"></div>
-
-      <h3>Answer Review</h3>
-      <div id="review"></div>
-
-      <div class="grid two">
-        <button id="btnToLeaderboard" class="btn">Go to Leaderboard</button>
-        <button id="btnToCert" class="btn gold">Generate Certificate</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="page-leader" class="page">
-    <div class="panel grid">
-      <h2 class="gold">Leaderboard</h2>
-      <div id="leaderboard-content" style="display: none;">
-        <div class="podium">
-          <div class="pod" id="p2"><div class="muted">🥈</div><h4 id="p2n">–</h4><div id="p2s" class="muted mono">–</div></div>
-          <div class="pod" id="p1"><div class="muted">🥇</div><h4 id="p1n">–</h4><div id="p1s" class="muted mono">–</div></div>
-          <div class="pod" id="p3"><div class="muted">🥉</div><h4 id="p3n">–</h4><div id="p3s" class="muted mono">–</div></div>
-        </div>
-        <div class="qcard muted">Top 3 winners please collect hadiah from Miss Anis 🎁</div>
-        <table class="table" id="tblLead">
-            <thead><tr><th>#</th><th>Name</th><th>Class</th><th>Matric</th><th>Score</th><th>%</th><th>Time(s)</th><th>Date</th></tr></thead>
-            <tbody></tbody>
-        </table>
-      </div>
-      <div id="leaderboard-waiting" class="qcard" style="text-align: center;">
-          <h4 class="muted">Please wait for the quiz to end to view the leaderboard.</h4>
-          <h4 class="gold">Please inform your tutor that you have finished the quiz.</h4>
-      </div>
-    </div>
-  </section>
-
-  <section id="page-cert" class="page">
-    <div class="panel grid">
-      <h2 class="gold">Certificate</h2>
-      <div id="certBox" class="cert">
-        <h1>Certificate of Achievement</h1>
-        <p>This is awarded to</p>
-        <h2 id="cName"></h2>
-        <p>for outstanding performance in</p>
-        <h3>Mathematics Quiz</h3>
-        <div class="grid two" style="margin-top:10px">
-          <div>Score: <b id="cScore"></b></div>
-          <div>Time: <b id="cTime"></b></div>
-        </div>
-        <div>Date: <span id="cDate"></span></div>
-        <div class="sig">
-          <div>___________________<br/>Miss Anis</div>
-          <div>___________________<br/>Teacher</div>
-        </div>
-      </div>
-      <div class="grid two">
-        <button id="btnBackDash" class="btn">Back to Dashboard</button>
-        <button id="btnSaveCert" class="btn gold">Download PNG</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="page-admin" class="page">
-    <div class="panel grid">
-      <h2 class="gold">Live Teacher Dashboard</h2>
-      <div class="live-status">
-          <span id="update-indicator" class="dot-red"></span> Live updates
-      </div>
-      <div class="grid two" style="margin-bottom: 16px;">
-        <div class="grid">
-          <label>Filter by Class</label>
-          <select id="adminClass" class="input">
-            <option value="">All</option>
-            <option>H3D</option>
-            <option>F1D</option>
-            <option>H2D</option>
-          </select>
-        </div>
-        <div class="grid" style="justify-items:end">
-          <button id="btnExport" class="btn">Export CSV</button>
-          <button id="btnClear" class="btn" style="border-color:#7a2b2b;color:#f3baba">Clear All Results</button>
-        </div>
-      </div>
-      <table class="table" id="tblAdmin">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Class</th>
-            <th>Matric</th>
-            <th>Score</th>
-            <th>Time</th>
-            <th>Progress</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-
-  <div class="panel" style="margin-top:16px">
-    <div class="tags">
-      <button class="btn" id="navStart">Start</button>
-      <button class="btn" id="navQuiz">Quiz</button>
-      <button class="btn" id="navStudent">Student</button>
-      <button class="btn" id="navLeader">Leaderboard</button>
-      <button class="btn" id="navCert">Certificate</button>
-      <button class="btn" id="navAdmin">Teacher</button>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script>
     /* ====== Storage helpers (localStorage, safe JSON) ====== */
@@ -446,7 +111,8 @@
 
     function buildAdminTable() {
         const liveResults = getStore(LIVE_KEY, []);
-        const filterClass = document.getElementById('adminClass').value || '';
+        const adminClassFilter = document.getElementById('adminClass');
+        const filterClass = adminClassFilter ? adminClassFilter.value : '';
         const filteredResults = filterClass ? liveResults.filter(r => r.klass === filterClass) : liveResults;
         const sorted = filteredResults.sort((a, b) => {
             const scoreA = scoreLiveAnswers(a.answers, QUESTION_BANK);
@@ -492,7 +158,6 @@
         }
     });
 
-    /* ====== Start flow ====== */
     function startQuiz() {
         const name = document.getElementById('stuName').value.trim();
         const matric = document.getElementById('stuMatric').value.trim();
@@ -517,7 +182,6 @@
         publishUpdate();
     }
 
-    /* ====== Live timer ====== */
     function startLiveTimer() {
         const el = document.getElementById('timeLive');
         if (quiz.timerId) clearInterval(quiz.timerId);
@@ -529,6 +193,7 @@
             }
         }, 5000);
     }
+
     function stopLiveTimer() {
         if (quiz.timerId) {
             clearInterval(quiz.timerId);
@@ -536,7 +201,6 @@
         }
     }
 
-    /* ====== Render current question ====== */
     function renderQuestion() {
         const q = quiz.list[quiz.idx];
         const cont = document.getElementById('qContainer');
@@ -545,7 +209,7 @@
         document.getElementById('progress').style.width = pct.toFixed(1) + '%';
         if (q.type === 'subjective') {
             const prior = quiz.answers.find(a => a.id === q.id);
-            const val = prior && prior.parts ? prior.parts : { a: '', b: '', c: '', d: '', e: '' };
+            const val = prior && prior.parts ? prior.parts : {};
             cont.innerHTML = `
                 <div style="margin-bottom:8px">${q.prompt}</div>
                 <div class="grid">
@@ -576,7 +240,6 @@
         document.getElementById('btnNext').textContent = (quiz.idx === quiz.list.length - 1) ? 'Submit Quiz' : 'Next';
     }
 
-    /* ====== Capture current answer (without advancing) ====== */
     function captureAnswer() {
         const q = quiz.list[quiz.idx];
         let rec = quiz.answers.find(a => a.id === q.id);
@@ -597,7 +260,6 @@
         }
     }
 
-    /* ====== Scoring ====== */
     function scoreNow() {
         let score = 0,
             total = quiz.list.length;
@@ -623,15 +285,12 @@
                 return { id: q.id, type: q.type, prompt: q.prompt, correct: ok, chosen, chosenText, correctKey: q.correct, correctText, solution: q.solutionSteps, options: q.options };
             }
         });
-
         const finishedAt = quiz.finishedAt || Date.now();
         const timeSec = Math.max(1, Math.round((finishedAt - quiz.startedAt) / 1000));
         const pct = Math.round((score / total) * 100);
         return { score, total, pct, timeSec, detail };
     }
 
-
-    /* ====== Persist and ranking ====== */
     function saveAttempt(result) {
         const all = getStore('quizResults', []);
         const rec = {
@@ -661,13 +320,11 @@
         return list;
     }
 
-    /* ====== End quiz ====== */
     function endQuiz() {
         quiz.finishedAt = Date.now();
         stopLiveTimer();
         const result = scoreNow();
         const saved = saveAttempt(result);
-
         updateStore(LIVE_KEY, data => {
             const existingIndex = data.findIndex(rec => rec.id === quiz.student.matric);
             if (existingIndex !== -1) {
@@ -684,7 +341,6 @@
         showPage('page-student');
     }
 
-    /* ====== Student dashboard build ====== */
     function buildStudentDashboard(my) {
         const all = rankAll();
         const idx = all.findIndex(r => r.name === my.name && r.matric === my.matric && r.ts === my.ts);
@@ -729,7 +385,6 @@
         });
     }
 
-    /* ====== Leaderboard & Certificate build ====== */
     function fillPodium(list) {
         const slots = [{ n: 'p1n', s: 'p1s' }, { n: 'p2n', s: 'p2s' }, { n: 'p3n', s: 'p3s' }];
         for (let i = 0; i < 3; i++) {
@@ -748,11 +403,9 @@
         }
     }
     
-    // ===== PEMBETULAN PENTING DI SINI =====
     function buildLeaderboard() {
-        // Semak jika elemen penapis wujud sebelum cuba mendapatkan nilainya
-        const sel = document.getElementById('filterClass');
-        const filterValue = sel ? sel.value : ''; // Jika sel tidak wujud, gunakan string kosong
+        const sel = document.getElementById('filterClass'); // Note: This ID does not exist in the Leaderboard HTML section
+        const filterValue = sel ? sel.value : '';
         const list = rankAll(filterValue);
         
         fillPodium(list);
@@ -785,10 +438,9 @@
         document.getElementById('cName').textContent = last.name;
         document.getElementById('cScore').textContent = `${last.score}/${last.total} (${last.pct}%)`;
         document.getElementById('cTime').textContent = `${last.time}s`;
-        document.getElementById('cDate').textContent = new Date(last.ts).toLocaleDateString();
+        document.getElementById('cDate').textContent = new Date(last.ts).toLocaleDateDateString();
     }
     
-    // Menunggu sehingga semua elemen HTML siap dimuatkan
     document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('btnStart').addEventListener('click', startQuiz);
@@ -823,8 +475,11 @@
                 alert('Wrong password');
             }
         });
-
-        document.getElementById('adminClass').addEventListener('change', buildAdminTable);
+        
+        const adminClassEl = document.getElementById('adminClass');
+        if (adminClassEl) {
+            adminClassEl.addEventListener('change', buildAdminTable);
+        }
         
         document.getElementById('btnClear').addEventListener('click', () => {
             if (!confirm('Clear all saved results?')) return;
@@ -931,9 +586,9 @@
             }
         });
 
-        // Initial build on page load
         buildLeaderboard();
     });
 </script>
+
 </body>
 </html>
