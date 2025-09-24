@@ -333,27 +333,28 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" referrerpolicy="no-referrer"></script>
 <script>
-    /* ====== Storage helpers (localStorage, safe JSON) ====== */
-    function getStore(key, fallback) {
-        try {
-            const s = localStorage.getItem(key);
-            return s ? JSON.parse(s) : fallback;
-        } catch (e) {
-            return fallback;
-        }
-    }
-    function setStore(key, val) {
-        try {
-            localStorage.setItem(key, JSON.stringify(val));
-        } catch (e) {}
-    }
-    function updateStore(key, callback) {
-        const data = getStore(key, []);
-        const newData = callback(data);
-        setStore(key, newData);
-    }
+    // [BARU] Initialize Firebase di sini
+    // Konfigurasi Firebase anda yang sebenar
+    const firebaseConfig = {
+      apiKey: "AIzaSyCOBYonlvARyZTKzqBdBRtful-2QqLnqTE",
+      authDomain: "quiz-math-bc402.firebaseapp.com",
+      databaseURL: "https://quiz-math-bc402-default-rtdb.firebaseio.com",
+      projectId: "quiz-math-bc402",
+      storageBucket: "quiz-math-bc402.appspot.com",
+      messagingSenderId: "473149419452",
+      appId: "1:473149419452:web:a34c04378c9462953905b9"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database(); 
+    
+    /* [DIBUANG] Fungsi getStore, setStore, updateStore telah dibuang. */
+
     /* ====== Pages controller ====== */
     const pages = ['page-start', 'page-quiz', 'page-student', 'page-leader', 'page-cert', 'page-admin'];
     function showPage(id) {
@@ -399,8 +400,9 @@
 
     /* ====== Live monitoring logic ====== */
     const ADMIN_SECRET = "Anis120467//";
-    const LIVE_KEY = 'quizLiveResults';
+    // const LIVE_KEY = 'quizLiveResults'; // Tidak diperlukan lagi
 
+    // [DIUBAH] Fungsi publishUpdate kini menggunakan Firebase
     function publishUpdate() {
         if (!quiz.student) return;
         const liveData = {
@@ -413,16 +415,8 @@
             answers: quiz.answers,
             submitted: false
         };
-        updateStore(LIVE_KEY, data => {
-            const existingIndex = data.findIndex(rec => rec.id === liveData.id);
-            if (existingIndex !== -1) {
-                data[existingIndex] = liveData;
-            } else {
-                data.push(liveData);
-            }
-            return data;
-        });
-        localStorage.setItem('quizUpdateSignal', Date.now());
+        // Gunakan nombor matrik sebagai kunci unik untuk menghantar data ke Firebase
+        db.ref('liveResults/' + quiz.student.matric).set(liveData);
     }
 
     function scoreLiveAnswers(answers, list) {
@@ -443,55 +437,60 @@
         });
         return score;
     }
-
+    
+    // [DIUBAH] buildAdminTable kini menggunakan listener Firebase
     function buildAdminTable() {
-        const liveResults = getStore(LIVE_KEY, []);
-        const adminClassFilter = document.getElementById('adminClass');
-        const filterClass = adminClassFilter ? adminClassFilter.value : '';
-        const filteredResults = filterClass ? liveResults.filter(r => r.klass === filterClass) : liveResults;
-        const sorted = filteredResults.sort((a, b) => {
-            const scoreA = scoreLiveAnswers(a.answers, QUESTION_BANK);
-            const scoreB = scoreLiveAnswers(b.answers, QUESTION_BANK);
-            if (scoreB !== scoreA) return scoreB - scoreA;
-            return a.time - b.time;
-        });
+        const liveResultsRef = db.ref('liveResults');
+        liveResultsRef.on('value', (snapshot) => {
+            const liveData = snapshot.val() || {}; // Dapatkan semua data pelajar
+            const liveResults = Object.values(liveData); // Tukar objek kepada array
 
-        const tb = document.querySelector('#tblAdmin tbody');
-        if (!tb) return;
-        tb.innerHTML = '';
+            const adminClassFilter = document.getElementById('adminClass');
+            const filterClass = adminClassFilter ? adminClassFilter.value : '';
+            const filteredResults = filterClass ? liveResults.filter(r => r.klass === filterClass) : liveResults;
+            const sorted = filteredResults.sort((a, b) => {
+                const scoreA = scoreLiveAnswers(a.answers, QUESTION_BANK);
+                const scoreB = scoreLiveAnswers(b.answers, QUESTION_BANK);
+                if (scoreB !== scoreA) return scoreB - scoreA;
+                return a.time - b.time;
+            });
 
-        sorted.forEach((r, i) => {
-            const score = scoreLiveAnswers(r.answers, QUESTION_BANK);
-            const tr = document.createElement('tr');
-            const progressText = r.submitted ? `Complete` : `${r.progress}/${r.total}`;
-            const timeText = r.submitted ? `${r.time}s` : mmss(r.time);
-            tr.innerHTML = `
-                <td>${i + 1}</td>
-                <td>${r.name}</td>
-                <td>${r.klass}</td>
-                <td>${r.matric}</td>
-                <td>${score}/${QUESTION_BANK.length}</td>
-                <td>${timeText}</td>
-                <td>${progressText}</td>
-            `;
-            tb.appendChild(tr);
+            const tb = document.querySelector('#tblAdmin tbody');
+            if (!tb) return;
+            tb.innerHTML = '';
+
+            sorted.forEach((r, i) => {
+                const score = scoreLiveAnswers(r.answers, QUESTION_BANK);
+                const tr = document.createElement('tr');
+                const progressText = r.submitted ? `Complete` : `${r.progress}/${r.total}`;
+                const timeText = r.submitted ? `${r.time}s` : mmss(r.time);
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${r.name}</td>
+                    <td>${r.klass}</td>
+                    <td>${r.matric}</td>
+                    <td>${score}/${QUESTION_BANK.length}</td>
+                    <td>${timeText}</td>
+                    <td>${progressText}</td>
+                `;
+                tb.appendChild(tr);
+            });
+            const indicator = document.getElementById('update-indicator');
+            if (indicator) {
+                indicator.classList.remove('dot-red');
+                indicator.classList.add('dot-green');
+                setTimeout(() => {
+                    indicator.classList.remove('dot-green');
+                    indicator.classList.add('dot-red');
+                }, 1000);
+            }
         });
-        const indicator = document.getElementById('update-indicator');
-        if (indicator) {
-            indicator.classList.remove('dot-red');
-            indicator.classList.add('dot-green');
-            setTimeout(() => {
-                indicator.classList.remove('dot-green');
-                indicator.classList.add('dot-red');
-            }, 1000);
-        }
     }
 
-    window.addEventListener('storage', (event) => {
-        if (event.key === 'quizUpdateSignal' && document.getElementById('page-admin').classList.contains('active')) {
-            buildAdminTable();
-        }
-    });
+    // [DIBUANG] Listener 'storage' telah dibuang
+    
+    // Fungsi-fungsi lain di bawah ini kebanyakannya kekal sama.
+    // Hanya fungsi yang berkaitan localStorage dan live monitoring yang diubah.
 
     function startQuiz() {
         const name = document.getElementById('stuName').value.trim();
@@ -625,6 +624,22 @@
         const pct = Math.round((score / total) * 100);
         return { score, total, pct, timeSec, detail };
     }
+    
+    // Fungsi-fungsi getStore dan setStore untuk 'quizResults' dan 'lastAttempt' masih digunakan
+    // untuk simpanan di pihak pelajar sahaja. Live monitoring tidak bergantung padanya lagi.
+    function getStore(key, fallback) {
+        try {
+            const s = localStorage.getItem(key);
+            return s ? JSON.parse(s) : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
+    function setStore(key, val) {
+        try {
+            localStorage.setItem(key, JSON.stringify(val));
+        } catch (e) {}
+    }
 
     function saveAttempt(result) {
         const all = getStore('quizResults', []);
@@ -660,17 +675,20 @@
         stopLiveTimer();
         const result = scoreNow();
         const saved = saveAttempt(result);
-        updateStore(LIVE_KEY, data => {
-            const existingIndex = data.findIndex(rec => rec.id === quiz.student.matric);
-            if (existingIndex !== -1) {
-                data[existingIndex].submitted = true;
-                data[existingIndex].time = result.timeSec;
-                data[existingIndex].answers = quiz.answers;
-                data[existingIndex].score = result.score;
-            }
-            return data;
-        });
-        localStorage.setItem('quizUpdateSignal', Date.now());
+        
+        // [DIUBAH] Kemas kini status 'submitted' dalam Firebase
+        const finalUpdate = {
+            id: quiz.student.matric,
+            name: quiz.student.name,
+            klass: quiz.student.klass,
+            progress: quiz.list.length,
+            total: quiz.list.length,
+            time: result.timeSec,
+            answers: quiz.answers,
+            submitted: true
+        };
+        db.ref('liveResults/' + quiz.student.matric).set(finalUpdate);
+        
         buildStudentDashboard(saved);
         buildLeaderboard();
         showPage('page-student');
@@ -800,12 +818,12 @@
             }
         });
 
+        // [DIUBAH] Login admin kini hanya memanggil buildAdminTable sekali sahaja
         document.getElementById('btnAdminLogin').addEventListener('click', () => {
             const v = document.getElementById('adminPass').value;
             if (v === ADMIN_SECRET) {
                 showPage('page-admin');
-                buildAdminTable();
-                setInterval(buildAdminTable, 5000);
+                buildAdminTable(); // Ini akan mengaktifkan live listener
             } else {
                 alert('Wrong password');
             }
@@ -816,18 +834,23 @@
             adminClassEl.addEventListener('change', buildAdminTable);
         }
         
+        // [DIUBAH] Butang Clear kini memadam data dari Firebase
         document.getElementById('btnClear').addEventListener('click', () => {
-            if (!confirm('Clear all saved results?')) return;
-            setStore('quizResults', []);
-            setStore('lastAttempt', null);
-            setStore(LIVE_KEY, []);
-            localStorage.setItem('quizFinished', 'false');
-            buildAdminTable();
+            if (!confirm('This will clear all LIVE results from the database. Are you sure?')) return;
+            // Padam keseluruhan nod 'liveResults' dari Firebase
+            db.ref('liveResults').remove();
+            // Anda juga boleh memadam kunci localStorage lama
+            localStorage.removeItem('quizResults');
+            localStorage.removeItem('lastAttempt');
+            localStorage.removeItem('quizFinished');
+            alert('All live results have been cleared from the database.');
+            // Listener dalam buildAdminTable akan mengemaskini paparan secara automatik.
             buildLeaderboard();
-            alert('All results cleared and leaderboard reset.');
         });
 
         document.getElementById('btnExport').addEventListener('click', () => {
+            // Nota: Fungsi eksport ini masih menggunakan localStorage.
+            // Untuk versi penuh, anda perlu membaca data dari Firebase.
             const all = getStore('quizResults', []);
             const header = ['Name', 'Class', 'Matric', 'Score', 'Total', 'Percent', 'Time(s)', 'ISO Date'];
             const rows = all.map(r => [
@@ -875,7 +898,7 @@
         });
         document.getElementById('navAdmin').addEventListener('click', () => {
             showPage('page-admin');
-            buildAdminTable();
+            // buildAdminTable() tidak perlu dipanggil di sini kerana ia aktif selepas login.
         });
 
         document.getElementById('btnToLeaderboard').addEventListener('click', () => {
