@@ -400,7 +400,6 @@
     /* ====== Live monitoring logic ====== */
     const ADMIN_SECRET = "Anis120467//";
     const LIVE_KEY = 'quizLiveResults';
-    const QUIZ_FINISHED_FLAG = 'quizFinished';
 
     function publishUpdate() {
         if (!quiz.student) return;
@@ -730,8 +729,7 @@
         });
     }
 
-
-    /* ====== Leaderboard build & Certificate build & Teacher admin (existing code, just updated) ====== */
+    /* ====== Leaderboard & Certificate build ====== */
     function fillPodium(list) {
         const slots = [{ n: 'p1n', s: 'p1s' }, { n: 'p2n', s: 'p2s' }, { n: 'p3n', s: 'p3s' }];
         for (let i = 0; i < 3; i++) {
@@ -749,9 +747,14 @@
             }
         }
     }
+    
+    // ===== PEMBETULAN PENTING DI SINI =====
     function buildLeaderboard() {
+        // Semak jika elemen penapis wujud sebelum cuba mendapatkan nilainya
         const sel = document.getElementById('filterClass');
-        const list = rankAll(sel ? sel.value : '' || '');
+        const filterValue = sel ? sel.value : ''; // Jika sel tidak wujud, gunakan string kosong
+        const list = rankAll(filterValue);
+        
         fillPodium(list);
         const tb = document.querySelector('#tblLead tbody');
         if (!tb) return;
@@ -776,6 +779,7 @@
         const last = getStore('lastAttempt', null);
         if (!last) {
             alert('No attempt found. Complete a quiz first.');
+            showPage('page-start');
             return;
         }
         document.getElementById('cName').textContent = last.name;
@@ -784,9 +788,7 @@
         document.getElementById('cDate').textContent = new Date(last.ts).toLocaleDateString();
     }
     
-    // Moved event listeners inside DOMContentLoaded
-    
-    // ===== KOD DIPERBAIKI: Semua event listener diletakkan di dalam DOMContentLoaded =====
+    // Menunggu sehingga semua elemen HTML siap dimuatkan
     document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('btnStart').addEventListener('click', startQuiz);
@@ -842,10 +844,7 @@
                 r.name, r.klass, r.matric, r.score, r.total, r.pct, r.time, r.ts
             ]);
             const csv = [header].concat(rows).map(line => {
-                return line.map(cell => {
-                    const s = String(cell ?? '');
-                    return `"${s.replace(/"/g, '""')}"`;
-                }).join(',');
+                return line.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',');
             }).join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -882,7 +881,7 @@
 
         document.getElementById('navCert').addEventListener('click', () => {
             buildCert();
-            showPage('page-cert')
+            showPage('page-cert');
         });
         document.getElementById('navAdmin').addEventListener('click', () => {
             showPage('page-admin');
@@ -904,41 +903,32 @@
 
         document.getElementById('btnToCert').addEventListener('click', () => {
             buildCert();
-            showPage('page-cert')
+            showPage('page-cert');
         });
 
         document.getElementById('btnBackDash').addEventListener('click', () => {
             const last = getStore('lastAttempt', null);
             if (last) buildStudentDashboard(last);
-            showPage('page-student')
+            showPage('page-student');
         });
-        
+
         const filterClassEl = document.getElementById('filterClass');
         if (filterClassEl) {
              filterClassEl.addEventListener('change', buildLeaderboard);
         }
 
-        /*
-        // KOD PUNCA RALAT DIJADIKAN KOMEN
-        document.getElementById('btnMyDash').addEventListener('click', () => {
-            const last = getStore('lastAttempt', null);
-            if (!last) {
-                alert('No attempt yet.');
-                return;
-            }
-            buildStudentDashboard(last);
-            showPage('page-student');
-        });
-        */
-
         document.getElementById('btnSaveCert').addEventListener('click', () => {
             const node = document.getElementById('certBox');
-            html2canvas(node).then(canvas => {
-                const a = document.createElement('a');
-                a.download = 'certificate.png';
-                a.href = canvas.toDataURL('image/png');
-                a.click();
-            });
+            if(window.html2canvas) {
+                html2canvas(node).then(canvas => {
+                    const a = document.createElement('a');
+                    a.download = 'certificate.png';
+                    a.href = canvas.toDataURL('image/png');
+                    a.click();
+                });
+            } else {
+                alert('Could not generate certificate. Library not loaded.');
+            }
         });
 
         // Initial build on page load
