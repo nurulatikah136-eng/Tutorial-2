@@ -494,7 +494,7 @@
     });
 
     /* ====== Start flow ====== */
-    document.getElementById('btnStart').addEventListener('click', () => {
+    function startQuiz() {
         const name = document.getElementById('stuName').value.trim();
         const matric = document.getElementById('stuMatric').value.trim();
         const klass = document.getElementById('stuClass').value.trim();
@@ -516,7 +516,7 @@
         renderQuestion();
         startLiveTimer();
         publishUpdate();
-    });
+    }
 
     /* ====== Live timer ====== */
     function startLiveTimer() {
@@ -598,27 +598,6 @@
         }
     }
 
-    /* ====== Nav buttons ====== */
-    document.getElementById('btnPrev').addEventListener('click', () => {
-        captureAnswer();
-        if (quiz.idx > 0) {
-            quiz.idx--;
-            renderQuestion();
-            publishUpdate();
-        }
-    });
-
-    document.getElementById('btnNext').addEventListener('click', () => {
-        captureAnswer();
-        if (quiz.idx === quiz.list.length - 1) {
-            endQuiz();
-        } else {
-            quiz.idx++;
-            renderQuestion();
-            publishUpdate();
-        }
-    });
-
     /* ====== Scoring ====== */
     function scoreNow() {
         let score = 0,
@@ -634,7 +613,7 @@
                 });
                 const partScore = checks.every(c => c.correct) ? 1 : 0;
                 score += partScore;
-                return { id: q.id, type: q.type, correct: partScore === 1, parts: checks, solution: q.solutionSteps };
+                return { id: q.id, type: q.type, prompt: q.prompt, correct: partScore === 1, parts: checks, solution: q.solutionSteps };
             } else {
                 const rec = quiz.answers.find(a => a.id === q.id);
                 const chosen = rec ? rec.choice : null;
@@ -642,7 +621,7 @@
                 if (ok) score += 1;
                 const chosenText = q.options.find(o => o.k === chosen)?.t || '';
                 const correctText = q.options.find(o => o.k === q.correct)?.t || '';
-                return { id: q.id, type: q.type, correct: ok, chosen, chosenText, correctKey: q.correct, correctText, solution: q.solutionSteps };
+                return { id: q.id, type: q.type, prompt: q.prompt, correct: ok, chosen, chosenText, correctKey: q.correct, correctText, solution: q.solutionSteps, options: q.options };
             }
         });
 
@@ -651,6 +630,7 @@
         const pct = Math.round((score / total) * 100);
         return { score, total, pct, timeSec, detail };
     }
+
 
     /* ====== Persist and ranking ====== */
     function saveAttempt(result) {
@@ -737,13 +717,11 @@
                     <div class="muted" style="margin-top:8px;white-space:pre-line">${d.solution.replace(/\n/g, '\n')}</div>
                 `;
             } else {
-                const correctText = d.options.find(o=>o.k===d.correctKey)?.t || '';
-                const chosenText = d.options.find(o=>o.k===d.chosen)?.t || '';
                 box.innerHTML = `
                     <div><b>Q${i + 1}</b> ${d.correct ? '✅' : '❌'}</div>
                     <div class="grid two">
-                        <div>Your Answer: <span class="${d.correct ? '' : 'muted'}">(${d.chosen || '—'}) ${chosenText}</span></div>
-                        <div>Correct: <span class="gold">(${d.correctKey}) ${correctText}</span></div>
+                        <div>Your Answer: <span class="${d.correct ? '' : 'muted'}">(${d.chosen || '—'}) ${d.chosenText}</span></div>
+                        <div>Correct: <span class="gold">(${d.correctKey}) ${d.correctText}</span></div>
                     </div>
                     <div class="muted" style="margin-top:8px">${d.solution}</div>
                 `;
@@ -751,6 +729,7 @@
             review.appendChild(box);
         });
     }
+
 
     /* ====== Leaderboard build & Certificate build & Teacher admin (existing code, just updated) ====== */
     function fillPodium(list) {
@@ -772,7 +751,7 @@
     }
     function buildLeaderboard() {
         const sel = document.getElementById('filterClass');
-        const list = rankAll(sel.value || '');
+        const list = rankAll(sel ? sel.value : '' || '');
         fillPodium(list);
         const tb = document.querySelector('#tblLead tbody');
         if (!tb) return;
@@ -804,131 +783,165 @@
         document.getElementById('cTime').textContent = `${last.time}s`;
         document.getElementById('cDate').textContent = new Date(last.ts).toLocaleDateString();
     }
-    const ADMIN_SECRET = "Anis120467//";
-    const LIVE_KEY = 'quizLiveResults';
+    
+    // Moved event listeners inside DOMContentLoaded
+    
+    // ===== KOD DIPERBAIKI: Semua event listener diletakkan di dalam DOMContentLoaded =====
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        document.getElementById('btnStart').addEventListener('click', startQuiz);
+        
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            captureAnswer();
+            if (quiz.idx > 0) {
+                quiz.idx--;
+                renderQuestion();
+                publishUpdate();
+            }
+        });
 
-    document.getElementById('btnAdminLogin').addEventListener('click', () => {
-        const v = document.getElementById('adminPass').value;
-        if (v === ADMIN_SECRET) {
+        document.getElementById('btnNext').addEventListener('click', () => {
+            captureAnswer();
+            if (quiz.idx === quiz.list.length - 1) {
+                endQuiz();
+            } else {
+                quiz.idx++;
+                renderQuestion();
+                publishUpdate();
+            }
+        });
+
+        document.getElementById('btnAdminLogin').addEventListener('click', () => {
+            const v = document.getElementById('adminPass').value;
+            if (v === ADMIN_SECRET) {
+                showPage('page-admin');
+                buildAdminTable();
+                setInterval(buildAdminTable, 5000);
+            } else {
+                alert('Wrong password');
+            }
+        });
+
+        document.getElementById('adminClass').addEventListener('change', buildAdminTable);
+        
+        document.getElementById('btnClear').addEventListener('click', () => {
+            if (!confirm('Clear all saved results?')) return;
+            setStore('quizResults', []);
+            setStore('lastAttempt', null);
+            setStore(LIVE_KEY, []);
+            localStorage.setItem('quizFinished', 'false');
+            buildAdminTable();
+            buildLeaderboard();
+            alert('All results cleared and leaderboard reset.');
+        });
+
+        document.getElementById('btnExport').addEventListener('click', () => {
+            const all = getStore('quizResults', []);
+            const header = ['Name', 'Class', 'Matric', 'Score', 'Total', 'Percent', 'Time(s)', 'ISO Date'];
+            const rows = all.map(r => [
+                r.name, r.klass, r.matric, r.score, r.total, r.pct, r.time, r.ts
+            ]);
+            const csv = [header].concat(rows).map(line => {
+                return line.map(cell => {
+                    const s = String(cell ?? '');
+                    return `"${s.replace(/"/g, '""')}"`;
+                }).join(',');
+            }).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'results.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('navStart').addEventListener('click', () => showPage('page-start'));
+        document.getElementById('navQuiz').addEventListener('click', () => showPage('page-quiz'));
+        document.getElementById('navStudent').addEventListener('click', () => {
+            const last = getStore('lastAttempt', null);
+            if (!last) {
+                alert('No attempt yet.');
+                return;
+            }
+            buildStudentDashboard(last);
+            showPage('page-student');
+        });
+        document.getElementById('navLeader').addEventListener('click', () => {
+            const quizFinished = localStorage.getItem('quizFinished') === 'true';
+            if (quizFinished) {
+                document.getElementById('leaderboard-content').style.display = 'block';
+                document.getElementById('leaderboard-waiting').style.display = 'none';
+                buildLeaderboard();
+            } else {
+                document.getElementById('leaderboard-content').style.display = 'none';
+                document.getElementById('leaderboard-waiting').style.display = 'block';
+            }
+            showPage('page-leader');
+        });
+
+        document.getElementById('navCert').addEventListener('click', () => {
+            buildCert();
+            showPage('page-cert')
+        });
+        document.getElementById('navAdmin').addEventListener('click', () => {
             showPage('page-admin');
             buildAdminTable();
-            setInterval(buildAdminTable, 5000);
-        } else {
-            alert('Wrong password');
-        }
-    });
-
-    document.getElementById('adminClass').addEventListener('change', buildAdminTable);
-    document.getElementById('btnClear').addEventListener('click', () => {
-        if (!confirm('Clear all saved results?')) return;
-        setStore('quizResults', []);
-        setStore('lastAttempt', null);
-        setStore(LIVE_KEY, []);
-        localStorage.setItem('quizFinished', 'false');
-        buildAdminTable();
-        buildLeaderboard();
-        alert('All results cleared and leaderboard reset.');
-    });
-
-    document.getElementById('btnExport').addEventListener('click', () => {
-        const all = getStore('quizResults', []);
-        const header = ['Name', 'Class', 'Matric', 'Score', 'Total', 'Percent', 'Time(s)', 'ISO Date'];
-        const rows = all.map(r => [
-            r.name, r.klass, r.matric, r.score, r.total, r.pct, r.time, r.ts
-        ]);
-        const csv = [header].concat(rows).map(line => {
-            return line.map(cell => {
-                const s = String(cell ?? '');
-                return `"${s.replace(/"/g, '""')}"`;
-            }).join(',');
-        }).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'results.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    document.getElementById('navStart').addEventListener('click', () => showPage('page-start'));
-    document.getElementById('navQuiz').addEventListener('click', () => showPage('page-quiz'));
-    document.getElementById('navStudent').addEventListener('click', () => {
-        const last = getStore('lastAttempt', null);
-        if (!last) {
-            alert('No attempt yet.');
-            return;
-        }
-        buildStudentDashboard(last);
-        showPage('page-student');
-    });
-    document.getElementById('navLeader').addEventListener('click', () => {
-        const quizFinished = localStorage.getItem('quizFinished') === 'true';
-        if (quizFinished) {
-            document.getElementById('leaderboard-content').style.display = 'block';
-            document.getElementById('leaderboard-waiting').style.display = 'none';
-            buildLeaderboard();
-        } else {
-            document.getElementById('leaderboard-content').style.display = 'none';
-            document.getElementById('leaderboard-waiting').style.display = 'block';
-        }
-        showPage('page-leader');
-    });
-
-    document.getElementById('navCert').addEventListener('click', () => {
-        buildCert();
-        showPage('page-cert')
-    });
-    document.getElementById('navAdmin').addEventListener('click', () => {
-        showPage('page-admin');
-        buildAdminTable();
-    });
-
-    document.getElementById('btnToLeaderboard').addEventListener('click', () => {
-        const quizFinished = localStorage.getItem('quizFinished') === 'true';
-        if (quizFinished) {
-            document.getElementById('leaderboard-content').style.display = 'block';
-            document.getElementById('leaderboard-waiting').style.display = 'none';
-            buildLeaderboard();
-        } else {
-            document.getElementById('leaderboard-content').style.display = 'none';
-            document.getElementById('leaderboard-waiting').style.display = 'block';
-        }
-        showPage('page-leader');
-    });
-
-    document.getElementById('btnToCert').addEventListener('click', () => {
-        buildCert();
-        showPage('page-cert')
-    });
-
-    document.getElementById('btnBackDash').addEventListener('click', () => {
-        const last = getStore('lastAttempt', null);
-        if (last) buildStudentDashboard(last);
-        showPage('page-student')
-    });
-    document.getElementById('filterClass').addEventListener('change', buildLeaderboard);
-    document.getElementById('btnMyDash').addEventListener('click', () => {
-        const last = getStore('lastAttempt', null);
-        if (!last) {
-            alert('No attempt yet.');
-            return;
-        }
-        buildStudentDashboard(last);
-        showPage('page-student');
-    });
-
-    document.getElementById('btnSaveCert').addEventListener('click', () => {
-        const node = document.getElementById('certBox');
-        html2canvas(node).then(canvas => {
-            const a = document.createElement('a');
-            a.download = 'certificate.png';
-            a.href = canvas.toDataURL('image/png');
-            a.click();
         });
-    });
 
-    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('btnToLeaderboard').addEventListener('click', () => {
+            const quizFinished = localStorage.getItem('quizFinished') === 'true';
+            if (quizFinished) {
+                document.getElementById('leaderboard-content').style.display = 'block';
+                document.getElementById('leaderboard-waiting').style.display = 'none';
+                buildLeaderboard();
+            } else {
+                document.getElementById('leaderboard-content').style.display = 'none';
+                document.getElementById('leaderboard-waiting').style.display = 'block';
+            }
+            showPage('page-leader');
+        });
+
+        document.getElementById('btnToCert').addEventListener('click', () => {
+            buildCert();
+            showPage('page-cert')
+        });
+
+        document.getElementById('btnBackDash').addEventListener('click', () => {
+            const last = getStore('lastAttempt', null);
+            if (last) buildStudentDashboard(last);
+            showPage('page-student')
+        });
+        
+        const filterClassEl = document.getElementById('filterClass');
+        if (filterClassEl) {
+             filterClassEl.addEventListener('change', buildLeaderboard);
+        }
+
+        /*
+        // KOD PUNCA RALAT DIJADIKAN KOMEN
+        document.getElementById('btnMyDash').addEventListener('click', () => {
+            const last = getStore('lastAttempt', null);
+            if (!last) {
+                alert('No attempt yet.');
+                return;
+            }
+            buildStudentDashboard(last);
+            showPage('page-student');
+        });
+        */
+
+        document.getElementById('btnSaveCert').addEventListener('click', () => {
+            const node = document.getElementById('certBox');
+            html2canvas(node).then(canvas => {
+                const a = document.createElement('a');
+                a.download = 'certificate.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            });
+        });
+
+        // Initial build on page load
         buildLeaderboard();
     });
 </script>
